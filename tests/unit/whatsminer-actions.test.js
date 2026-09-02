@@ -309,7 +309,11 @@ test('setLED - enabled fires red+green and schedules auto reset', async (t) => {
   const calls = stubWrite(miner)
   const realSetTimeout = global.setTimeout
   let scheduledMs = null
-  global.setTimeout = (fn, ms) => { scheduledMs = ms; return { unref () {} } }
+  let unrefCalled = false
+  global.setTimeout = (fn, ms) => {
+    scheduledMs = ms
+    return { unref () { unrefCalled = true } }
+  }
   try {
     t.alike(await miner.setLED(true), { success: true })
   } finally {
@@ -319,6 +323,7 @@ test('setLED - enabled fires red+green and schedules auto reset', async (t) => {
   t.is(calls[0].params.color, 'red')
   t.is(calls[1].params.color, 'green')
   t.is(scheduledMs, 2 * 60 * 1000)
+  t.ok(unrefCalled)
 })
 
 test('setLED - disabled sets auto param', async (t) => {

@@ -78,6 +78,15 @@ WHATSMINER_PASSWORD='your-api-password' node scripts/test-live-readonly.js 192.1
 
 This script only requests telemetry. It does not invoke `set.*`, reboot, pool, network, or firmware commands.
 
+On controlled test hardware with API writes explicitly enabled, validate the reversible LED command and its rollback:
+
+```bash
+WHATSMINER_PASSWORD='your-api-password' node scripts/test-live-led.js 192.168.1.10 4433
+WHATSMINER_PASSWORD='your-api-password' node scripts/test-live-led.js 192.168.1.10 4028
+```
+
+The script records the LED state, enables identification flashing, confirms the changed state, restores automatic LED control, and confirms the rollback. It does not change power, pools, network settings, hostname, or firmware. API write access remains controlled by the miner and must not be left enabled after testing.
+
 ## Safety
 
 Commands can change physical miner state. Network and firmware operations can make a device unreachable. Write requests are never automatically retried when a timeout or connection reset leaves the physical outcome unknown. Validate writes against the bundled mock before using controlled test hardware.
