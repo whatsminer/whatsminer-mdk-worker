@@ -1,0 +1,51 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out Worker
+        uses: actions/checkout@v4
+        with:
+          path: whatsminer-mdk-worker
+
+      - name: Check out MDK
+        uses: actions/checkout@v4
+        with:
+          repository: tetherto/mdk
+          path: mdk
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: whatsminer-mdk-worker/package-lock.json
+
+      - name: Install MDK core dependencies
+        working-directory: mdk/backend/core
+        run: ./install-packages.sh
+
+      - name: Install Worker dependencies
+        working-directory: whatsminer-mdk-worker
+        run: npm ci
+
+      - name: Run Worker tests
+        working-directory: whatsminer-mdk-worker
+        env:
+          MDK_REPO: ../mdk
+        run: npm test
+
+      - name: Run MDK Worker smoke test
+        working-directory: whatsminer-mdk-worker
+        run: node ../mdk/packages/mdk-skill/src/skills/mdk-worker-plugin/scripts/worker-smoke.mjs .

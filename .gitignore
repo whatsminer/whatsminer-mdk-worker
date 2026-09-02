@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+.env
+.env.*
+!.env.example
+*.tgz
+*.swp
+*.swo
+.DS_Store
+logs
+store
+coverage
+.idea/
+.scannerwork

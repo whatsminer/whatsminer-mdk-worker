@@ -1,0 +1,49 @@
+{
+  "name": "whatsminer-mdk-worker",
+  "version": "0.1.0",
+  "description": "Official MicroBT WhatsMiner Worker plugin for Tether MDK",
+  "keywords": [
+    "tether",
+    "mdk",
+    "microbt",
+    "whatsminer"
+  ],
+  "author": "MicroBT",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "files": [
+    "lib/",
+    "src/",
+    "mock/",
+    "scripts/",
+    "mdk-contract.json",
+    "smoke.config.js",
+    "README.md",
+    "USAGE.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "lint": "standard",
+    "lint:fix": "standard --fix",
+    "mock": "node scripts/run-v3-mock.js",
+    "test": "npm run lint && npm run test:unit && npm run test:integration",
+    "test:unit": "brittle tests/unit/api-v3-*.test.js tests/unit/firmware*.test.js tests/unit/hex2a.test.js tests/unit/md5.test.js tests/unit/protocols-*.test.js tests/unit/util-index.test.js tests/unit/whatsminer*.test.js",
+    "test:integration": "NODE_ENV=test brittle tests/integration/runtime-v2.test.js",
+    "test:coverage": "NODE_ENV=test brittle --coverage tests/unit/api-v3-*.test.js tests/unit/firmware*.test.js tests/unit/hex2a.test.js tests/unit/md5.test.js tests/unit/protocols-*.test.js tests/unit/util-index.test.js tests/unit/whatsminer*.test.js tests/integration/runtime-v2.test.js"
+  },
+  "dependencies": {
+    "async": "3.2.6",
+    "crypto-js": "4.2.0",
+    "debug": "4.4.1"
+  },
+  "devDependencies": {
+    "brittle": "3.16.3",
+    "standard": "17.1.2"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.9"
+  }
+}

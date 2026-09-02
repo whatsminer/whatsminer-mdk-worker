@@ -1,0 +1,8 @@
+WhatsMiner MDK Worker
+Copyright 2026 MicroBT
+
+This product includes and adapts software from the Tether MDK project,
+licensed under the Apache License, Version 2.0.
+
+The standalone Worker integration, MicroBT firmware protocol support,
+and subsequent modifications are maintained by MicroBT.
