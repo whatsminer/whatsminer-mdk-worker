@@ -4,7 +4,9 @@ const path = require('node:path')
 const test = require('brittle')
 const { createServer } = require('../../mock/api-v3-server')
 
-const MDK_REPO = process.env.MDK_REPO || path.resolve(__dirname, '../../../mdk')
+const MDK_REPO = process.env.MDK_REPO
+  ? path.resolve(process.env.MDK_REPO)
+  : path.resolve(__dirname, '../../../mdk')
 const WorkerRuntimeV2 = require(path.join(MDK_REPO, 'backend/core/mdk-worker/lib/worker-runtime-v2'))
 const { build } = require(path.join(MDK_REPO, 'backend/core/kernel/lib/protocol/envelope'))
 const { ACTIONS, MESSAGE_TYPES } = require(path.join(MDK_REPO, 'backend/core/kernel/lib/protocol/actions'))
