@@ -4,13 +4,14 @@ const test = require('brittle')
 const WhatsminerApiV3Client = require('../../lib/whatsminer-api-v3-client')
 const WhatsminerApiV2Client = require('../../lib/whatsminer-api-v2-client')
 
-function createClient (responses) {
+function createClient (responses, opts = {}) {
   const client = new WhatsminerApiV3Client({
     address: '127.0.0.1',
     port: 4433,
     password: 'super',
     type: 'miner-wm-m50s',
-    id: 'WM-V3'
+    id: 'WM-V3',
+    ...opts
   })
   client.protocol.requestRead = async (command, params) => ({
     code: 0,
@@ -103,6 +104,80 @@ test('api-v3 client - does not hide non-idle pool query failures', async (t) => 
   client.protocol.requestRead = async () => { throw new Error('ERR_API_V3_TIMEOUT') }
 
   await t.exception(client.getPools(), /ERR_API_V3_TIMEOUT/)
+})
+
+test('api-v3 client - merges configured backup pools with runtime status', async (t) => {
+  const client = createClient({
+    'get.miner.status:pools': {
+      pools: [{
+        id: 1,
+        url: 'stratum+tcp://primary:3333',
+        account: 'worker.primary',
+        status: 'alive',
+        'stratum-active': true,
+        'stratum-diff': 16384
+      }]
+    }
+  }, {
+    conf: {
+      pools: [
+        { url: 'stratum+tcp://primary:3333', worker_name: 'worker.primary', worker_password: 'secret-1' },
+        { url: 'stratum+tcp://backup:3333', worker_name: 'worker.backup', worker_password: 'secret-2' }
+      ]
+    }
+  })
+
+  const pools = await client.getPools()
+  t.is(pools.length, 2)
+  t.is(pools[0].status, 'alive')
+  t.is(pools[0].stratum_active, true)
+  t.is(pools[0].stratum_difficulty, 16384)
+  t.is(pools[1].url, 'stratum+tcp://backup:3333')
+  t.is(pools[1].user, 'worker.backup')
+  t.is(pools[1].status, 'unknown')
+  t.is(pools[1].stratum_active, false)
+  t.absent(pools[0].worker_password)
+  t.absent(pools[1].worker_password)
+})
+
+test('api-v3 client - successful pool write updates configured view without passwords', async (t) => {
+  const client = createClient({
+    'get.miner.status:pools': {
+      pools: [{ id: 1, url: 'stratum+tcp://primary:3333', status: 'alive' }]
+    }
+  })
+  client.protocol.requestWrite = async () => ({ code: 0, msg: 'ok' })
+
+  const result = await client.setPools([
+    { url: 'stratum+tcp://primary:3333', worker_name: 'worker.primary', worker_password: 'secret-1' },
+    { url: 'stratum+tcp://backup:3333', worker_name: 'worker.backup', worker_password: 'secret-2' }
+  ], false)
+
+  t.alike(result, { success: true })
+  const pools = await client.getPools()
+  t.is(pools.length, 2)
+  t.is(pools[1].url, 'stratum+tcp://backup:3333')
+  t.is(pools[1].status, 'unknown')
+  t.absent(pools[0].worker_password)
+  t.absent(pools[1].worker_password)
+})
+
+test('api-v3 client - failed pool write preserves configured view', async (t) => {
+  const client = createClient({}, {
+    conf: {
+      pools: [{ url: 'stratum+tcp://original:3333', worker_name: 'worker.original', worker_password: 'secret' }]
+    }
+  })
+  client.protocol.requestWrite = async () => { throw new Error('ERR_FAIL') }
+
+  const result = await client.setPools([
+    { url: 'stratum+tcp://replacement:3333', worker_name: 'worker.replacement', worker_password: 'replacement-secret' }
+  ], false)
+
+  t.alike(result, { success: false, error_msg: 'ERR_FAIL' })
+  t.is(client.configuredPools.length, 1)
+  t.is(client.configuredPools[0].url, 'stratum+tcp://original:3333')
+  t.absent(client.configuredPools[0].worker_password)
 })
 
 test('api-v3 client - normalizes native device identity and version', async (t) => {

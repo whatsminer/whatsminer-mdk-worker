@@ -18,6 +18,8 @@ The contract exposes these channels:
 
 API v3 firmware that does not report accepted or rejected share counts returns zero for those two channels. Pool passwords and API credentials are never returned by telemetry.
 
+For API v3, `pools` merges the configured pool order with the firmware's runtime status. A configured backup that is not present in the runtime response is retained with `status: "unknown"` and `stratum_active: false`; the Worker does not invent an Alive or Dead state. Pool passwords are never cached in this telemetry view.
+
 ## Commands
 
 | Command | Main parameter | Physical effect |
