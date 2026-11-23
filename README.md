@@ -14,11 +14,9 @@ When `port` and `apiVersion` are omitted, the Worker probes API v3 first and the
 ## Requirements
 
 - Node.js 24 or newer
-- A Tether MDK checkout containing `WorkerRuntimeV2`
+- The MDK Worker runtime from npm: `npm install @tetherto/mdk-worker`
 - Network access from the Worker host to the miner's API port
 - A WhatsMiner API account and password
-
-Until `@tetherto/mdk-worker` is published separately, follow Tether's `Test a Worker with MDK` guide to install the MDK monorepo and its core dependencies.
 
 ## Host the Worker
 
@@ -26,7 +24,7 @@ Until `@tetherto/mdk-worker` is published separately, follow Tether's `Test a Wo
 'use strict'
 
 const path = require('node:path')
-const { WorkerRuntimeV2 } = require('@tetherto/mdk/backend/core/mdk-worker')
+const { WorkerRuntimeV2 } = require('@tetherto/mdk-worker')
 
 const runtime = new WorkerRuntimeV2(path.resolve('/path/to/whatsminer-mdk-worker'), {
   workerId: 'whatsminer-rack-1',

@@ -36,13 +36,13 @@
     "test:smoke": "node node_modules/@tetherto/mdk-skill/dist/skills/mdk-worker/scripts/worker-smoke.mjs ."
   },
   "dependencies": {
-    "@tetherto/mdk-worker": "^0.13.1",
+    "@tetherto/mdk-worker": "^0.14.0",
     "async": "3.2.6",
-    "debug": "4.4.1"
+    "debug": "4.4.3"
   },
   "devDependencies": {
-    "@tetherto/mdk-kernel": "^0.13.1",
-    "@tetherto/mdk-skill": "^0.13.1",
+    "@tetherto/mdk-kernel": "^0.14.0",
+    "@tetherto/mdk-skill": "^0.14.0",
     "brittle": "3.16.3",
     "standard": "17.1.2"
   },

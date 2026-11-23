@@ -20,6 +20,8 @@ API v3 firmware that does not report accepted or rejected share counts returns z
 
 For API v3, `pools` merges the configured pool order with the firmware's runtime status. A configured backup that is not present in the runtime response is retained with `status: "unknown"` and `stratum_active: false`; the Worker does not invent an Alive or Dead state. Pool passwords are never cached in this telemetry view.
 
+`snap` includes the miner's run state under `stats.miner_specific.status`, using the API v2 `status` keys: `mineroff`, `mineroff_reason`, `mineroff_time`, `FirmwareVersion`, `power_mode`, `power_limit_set`, `hash_percent`, `fast_mining`, `fast_hash`, and `liquid_temp`. On API v2 this is the firmware's `status` reply as-is. API v3 has no `status` command, so the Worker rebuilds the same shape from `get.device.info` and `get.miner.setting`; `mineroff_reason`, `mineroff_time`, `fast_mining`, and `liquid_temp` have no v3 source and are always omitted, and any other field the firmware does not report is omitted rather than defaulted.
+
 ## Commands
 
 | Command | Main parameter | Physical effect |
@@ -55,10 +57,16 @@ The Worker rejects non-canonical Base64, mismatched sizes or hashes, unsafe file
 ## Failure semantics
 
 - Read failures surface on the affected telemetry channel.
+- Exception: on API v2, a failed `status` read does not fail `snap`. The snapshot is returned with `stats.miner_specific.status` undefined, so firmware without the `status` command still reports.
 - Authentication and firmware error strings are stable `ERR_*` values documented by the contract.
+- Command parameters are validated by the MDK runtime against `mdk-contract.json` before the Worker runs. Out-of-range values fail with the runtime's `ERR_PARAM_RANGE: …` (for example `setPowerPct` with `pct` above 200). `ERR_POWER_PCT_NOT_SUPPORTED` is returned only for in-range values the miner or its cooling cannot accept.
 - A timeout after a physical write is an unknown result, not permission to retry.
 - `setNetwork` and `updateFirmware` use single-attempt paths. Confirm the miner's new address or firmware version before any further action.
 - Do not issue `reboot` to an offline miner.
+
+## Firmware compatibility
+
+API v2 firmware 2026xx REL2 zero-pads encrypted responses instead of using PKCS#7. The Worker detects this and decrypts both formats; no configuration is needed.
 
 ## Mock
 
