@@ -59,11 +59,12 @@ See [USAGE.md](USAGE.md) and [mdk-contract.json](mdk-contract.json) for telemetr
 
 ## Test
 
-With this repository and `mdk` checked out as sibling directories:
+The MDK runtime (`@tetherto/mdk-worker`, `@tetherto/mdk-kernel`) and the smoke harness (`@tetherto/mdk-skill`) are installed from npm:
 
 ```bash
 npm install
-MDK_REPO=../mdk npm test
+npm test
+npm run test:smoke
 ```
 
 The test suite covers protocol authentication and framing, API v2/v3 normalization, firmware payload validation, contract handler loading, mock-device behavior, and WorkerRuntimeV2 envelope dispatch.

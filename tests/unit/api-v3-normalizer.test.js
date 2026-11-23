@@ -203,3 +203,64 @@ test('api-v3 client - normalizes native device identity and version', async (t) 
   t.is(version.whatsminer.api, '3.0.3')
   t.is(version.platform, 'H616')
 })
+
+test('api-v3 client - getMinerInfo exposes the settings the status view needs', async (t) => {
+  const client = createClient({
+    'get.device.info:': {
+      miner: { working: 'true', 'hash-percent': '0', 'power-limit-set': '99999' },
+      system: { ledstatus: 'auto' }
+    },
+    'get.miner.setting': { 'power-mode': 'normal', 'fast-hash': 'disable', 'upfreq-speed': 0 }
+  })
+
+  const info = await client.getMinerInfo()
+  t.is(info.power_mode_setting, 'normal')
+  t.is(info.fast_hash, 'disable')
+  t.is(info.working, 'true')
+})
+
+test('api-v3 client - snap carries the v2-shaped status under miner_specific', async (t) => {
+  const client = createClient({})
+  client.getMinerStats = async () => ({ mhs_av: 404289000, power: 7485.85, power_mode: 'normal' })
+  client.getPools = async () => []
+  client.getDevices = async () => []
+  client.getErrors = async () => []
+  client.getMinerInfo = async () => ({
+    proto: 'dhcp',
+    dns: '10.0.44.1',
+    ledstat: 'auto',
+    upfreq_speed: 0,
+    working: 'true',
+    'hash-percent': '0',
+    'power-limit-set': '99999',
+    power_mode_setting: 'normal',
+    fast_hash: 'disable'
+  })
+  client.getVersion = async () => ({ whatsminer: { api: '3.0.5', firmware: '20260908.12.Rel2' } })
+
+  const snap = await client.getSnap()
+  t.is(snap.success, true)
+  t.alike(snap.stats.miner_specific.status, {
+    mineroff: 'false',
+    FirmwareVersion: '20260908.12.Rel2',
+    power_mode: 'normal',
+    power_limit_set: '99999',
+    hash_percent: '0',
+    fast_hash: 'false'
+  })
+})
+
+test('api-v3 client - status view reports a stopped miner and omits fields firmware did not send', (t) => {
+  const client = createClient({})
+  const status = client._minerStatus({ working: 'false', fast_hash: 'enable' }, { whatsminer: { firmware: 'FW' } })
+  t.is(status.mineroff, 'true')
+  t.is(status.fast_hash, 'true')
+  t.is(status.FirmwareVersion, 'FW')
+  t.is(status.power_mode, undefined)
+  t.is(status.power_limit_set, undefined)
+  t.is(status.hash_percent, undefined)
+
+  const unknown = client._minerStatus({}, { whatsminer: { firmware: 'FW' } })
+  t.is(unknown.mineroff, undefined)
+  t.is(unknown.fast_hash, undefined)
+})

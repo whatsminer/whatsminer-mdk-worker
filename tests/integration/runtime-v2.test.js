@@ -2,14 +2,11 @@
 
 const path = require('node:path')
 const test = require('brittle')
+const { WorkerRuntimeV2 } = require('@tetherto/mdk-worker')
+const { build } = require('@tetherto/mdk-kernel/protocol/envelope')
+const { ACTIONS, MESSAGE_TYPES } = require('@tetherto/mdk-kernel/protocol/actions')
 const { createServer } = require('../../mock/api-v3-server')
 
-const MDK_REPO = process.env.MDK_REPO
-  ? path.resolve(process.env.MDK_REPO)
-  : path.resolve(__dirname, '../../../mdk')
-const WorkerRuntimeV2 = require(path.join(MDK_REPO, 'backend/core/mdk-worker/lib/worker-runtime-v2'))
-const { build } = require(path.join(MDK_REPO, 'backend/core/kernel/lib/protocol/envelope'))
-const { ACTIONS, MESSAGE_TYPES } = require(path.join(MDK_REPO, 'backend/core/kernel/lib/protocol/actions'))
 const WORKER_DIR = path.resolve(__dirname, '../..')
 
 const request = (action, deviceId, payload = {}) => build({
@@ -26,6 +23,9 @@ test('WorkerRuntimeV2 loads the standalone package and serves a v3 miner', async
   const address = await mock.ready
   const runtime = new WorkerRuntimeV2(WORKER_DIR, {
     workerId: 'whatsminer-test',
+    // Requests go through handleRequest directly, so no DHT peer ever connects;
+    // a placeholder key satisfies the runtime's fail-closed admission check.
+    allowedKeys: ['00'.repeat(32)],
     devices: [{
       deviceId: 'wm-v3-0',
       config: {
@@ -78,7 +78,8 @@ test('WorkerRuntimeV2 loads the standalone package and serves a v3 miner', async
       params: { pct: 201 }
     }))
     t.is(invalid.payload.status, 'FAILED')
-    t.is(invalid.payload.error, 'ERR_POWER_PCT_NOT_SUPPORTED')
+    // The runtime validates params against mdk-contract.json (max 200) before dispatch.
+    t.is(invalid.payload.error, 'ERR_PARAM_RANGE: pct above max 200')
   } finally {
     await runtime.stop()
     await mock.close()

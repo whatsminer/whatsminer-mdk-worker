@@ -7,16 +7,13 @@ const port = process.argv[3] ? Number(process.argv[3]) : undefined
 const apiVersion = process.env.WHATSMINER_API_VERSION
 const password = process.env.WHATSMINER_PASSWORD
 const account = process.env.WHATSMINER_ACCOUNT || 'admin'
-const mdkRepo = process.env.MDK_REPO
-  ? path.resolve(process.env.MDK_REPO)
-  : path.resolve(__dirname, '../../mdk')
 
 if (!address || !password || !Number.isInteger(port) || port < 1 || port > 65535) {
   console.error('usage: WHATSMINER_PASSWORD=... node scripts/test-live-led.js <address> <port>')
   process.exit(1)
 }
 
-const WorkerRuntimeV2 = require(path.join(mdkRepo, 'backend/core/mdk-worker/lib/worker-runtime-v2'))
+const { WorkerRuntimeV2 } = require('@tetherto/mdk-worker')
 const workerDir = path.resolve(__dirname, '..')
 const deviceId = `whatsminer-${address.replaceAll('.', '-')}-${port}`
 let sequence = 0
