@@ -1,7 +1,7 @@
 'use strict'
 
 const test = require('brittle')
-const CryptoJS = require('crypto-js')
+const { aesEncrypt } = require('../../lib/utils/crypto')
 const Whatsminer = require('../../lib/whatsminer-api-v2-client')
 const { STATUS } = require('../../lib/constants')
 
@@ -37,7 +37,7 @@ function makeWhatsminer (responses = [], opts = {}) {
 
 // mirrors the device-side envelope: AES-ECB over SHA256(key), hex plaintext
 function encryptedFrame (data, key = TOKEN.key) {
-  const enc = CryptoJS.AES.encrypt(JSON.stringify(data), CryptoJS.SHA256(key), { mode: CryptoJS.mode.ECB }).toString()
+  const enc = aesEncrypt(JSON.stringify(data), key)
   return JSON.stringify({ enc })
 }
 
@@ -207,7 +207,20 @@ test('getPSUInformation - accepts vendor and legacy vender spellings', async (t)
   t.is((await miner.getPSUInformation()).vendor, 'legacy')
 })
 
-function stubSnapReads (miner, { errors, minerInfo }) {
+const BASE_MINER_STATUS = {
+  mineroff: 'false',
+  mineroff_reason: '',
+  mineroff_time: '',
+  FirmwareVersion: '20230714.15.Rel',
+  power_mode: 'normal',
+  power_limit_set: '99999',
+  hash_percent: '0',
+  fast_mining: 'false',
+  fast_hash: 'false',
+  liquid_temp: 32.375
+}
+
+function stubSnapReads (miner, { errors, minerInfo, minerStatus = BASE_MINER_STATUS }) {
   miner.getMinerStats = async () => ({
     elapsed: '100',
     mhs_av: '295000000',
@@ -233,6 +246,7 @@ function stubSnapReads (miner, { errors, minerInfo }) {
   miner.getErrors = async () => errors
   miner.getMinerInfo = async () => minerInfo
   miner.getVersion = async () => ({ chip: 'c', platform: 'H616', whatsminer: { api: '2.0.5', firmware: '20230714.15.Rel' } })
+  miner.getMinerStatus = async () => minerStatus
 }
 
 const BASE_MINER_INFO = {
@@ -255,6 +269,7 @@ test('_prepSnap - healthy miner snapshot', async (t) => {
   t.is(snap.stats.power_w, 3300.7)
   t.is(snap.stats.uptime_ms, 100000)
   t.is(snap.stats.miner_specific.upfreq_speed, undefined)
+  t.alike(snap.stats.miner_specific.status, BASE_MINER_STATUS)
   t.alike(snap.stats.all_pools_shares, { accepted: 5, rejected: 1, stale: 0 })
   t.alike(snap.config.network_config.dns, ['1.1.1.1', '8.8.8.8'])
   t.is(snap.config.power_mode, 'normal')
@@ -278,6 +293,46 @@ test('_prepSnap - errored miner snapshot includes errors and upfreq speed', asyn
   t.is(snap.stats.miner_specific.upfreq_speed, 5)
   t.is(snap.config.led_status, true)
   t.alike(miner._errorLog, errors)
+})
+
+test('_prepSnap - snapshot still builds when the status read fails', async (t) => {
+  const { miner } = makeWhatsminer()
+  stubSnapReads(miner, { errors: [], minerInfo: { ...BASE_MINER_INFO } })
+  miner.getMinerStatus = async () => { throw new Error('ERR_READ_FAILED') }
+
+  const snap = await miner._prepSnap()
+  t.is(snap.stats.status, STATUS.MINING)
+  t.is(snap.stats.miner_specific.status, undefined)
+})
+
+test('getMinerStatus - returns the status Msg', async (t) => {
+  const { miner } = makeWhatsminer()
+  const calls = []
+  miner._requestReadEndpoint = async (command) => {
+    calls.push(command)
+    return { STATUS: 'S', Code: 131, Msg: { ...BASE_MINER_STATUS } }
+  }
+
+  t.alike(await miner.getMinerStatus(), BASE_MINER_STATUS)
+  t.alike(calls, ['status'])
+})
+
+test('getMinerStatus - rejects an error reply instead of returning its Msg', async (t) => {
+  const { miner } = makeWhatsminer()
+  miner._requestReadEndpoint = async () => ({ STATUS: 'E', Code: 132, Msg: 'This command is deprecated.' })
+
+  await t.exception(() => miner.getMinerStatus(), /ERR_MINER_STATUS_FAILED: This command is deprecated\. \(Code: 132\)/)
+})
+
+test('_prepSnap - status is undefined when firmware answers status with an error', async (t) => {
+  const { miner } = makeWhatsminer()
+  stubSnapReads(miner, { errors: [], minerInfo: { ...BASE_MINER_INFO } })
+  miner.getMinerStatus = Whatsminer.prototype.getMinerStatus
+  miner._requestReadEndpoint = async () => ({ STATUS: 'E', Code: 14, Msg: 'invalid cmd' })
+
+  const snap = await miner._prepSnap()
+  t.is(snap.stats.status, STATUS.MINING)
+  t.is(snap.stats.miner_specific.status, undefined)
 })
 
 test('_prepSnap - uses summary chip temperature and legacy device PCB temperature', async (t) => {

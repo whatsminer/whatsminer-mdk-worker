@@ -6,14 +6,13 @@ const address = process.argv[2]
 const port = process.argv[3] ? Number(process.argv[3]) : undefined
 const password = process.env.WHATSMINER_PASSWORD
 const account = process.env.WHATSMINER_ACCOUNT || 'admin'
-const mdkRepo = process.env.MDK_REPO || path.resolve(__dirname, '../../mdk')
 
 if (!address || !password || (port !== undefined && !Number.isInteger(port))) {
   console.error('usage: WHATSMINER_PASSWORD=... node scripts/test-live-readonly.js <address> [4433|4028]')
   process.exit(1)
 }
 
-const WorkerRuntimeV2 = require(path.join(mdkRepo, 'backend/core/mdk-worker/lib/worker-runtime-v2'))
+const { WorkerRuntimeV2 } = require('@tetherto/mdk-worker')
 const workerDir = path.resolve(__dirname, '..')
 const deviceId = `whatsminer-${address.replaceAll('.', '-')}`
 
@@ -34,6 +33,9 @@ const main = async () => {
   if (port !== undefined) config.port = port
   const runtime = new WorkerRuntimeV2(workerDir, {
     workerId: 'whatsminer-live-readonly',
+    // Requests go through handleRequest directly, so no DHT peer ever connects;
+    // a placeholder key satisfies the runtime's fail-closed admission check.
+    allowedKeys: ['00'.repeat(32)],
     devices: [{ deviceId, config }]
   })
 

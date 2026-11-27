@@ -63,6 +63,13 @@ test('protocols/v2-handler - parseResponse returns unchanged', (t) => {
   t.alike(handler.parseResponse(response, 'cmd'), response, 'should return response unchanged')
 })
 
+test('protocols/v2-handler - parseResponse keeps status Msg and top-level STATUS', (t) => {
+  const handler = new WMApiV2({ rpc: {}, password: 'admin' })
+
+  const response = { STATUS: 'S', When: 1, Code: 131, Msg: { mineroff: 'false', power_mode: 'normal' }, Description: '' }
+  t.alike(handler.parseResponse(response, 'status'), response, 'status responses pass through with Msg intact')
+})
+
 test('protocols/v2-handler - authenticate success', async (t) => {
   const mockRpc = createMockRpc([{
     Code: 131,

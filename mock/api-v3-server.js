@@ -224,16 +224,20 @@ function getResponse (request, state, { password = 'super' } = {}) {
 }
 
 function createServer ({ host = '127.0.0.1', port = 0, state = {}, fragmentResponses = false, password = 'super' } = {}) {
+  // Every instance gets its own copy of the defaults: a shallow spread would
+  // share `summary`, `pools`, `edevs` and `setting` between the mocks of one
+  // process, so a set command on one miner changed every other miner too.
+  const base = structuredClone(DEFAULT_STATE)
   const mergedState = {
-    ...DEFAULT_STATE,
+    ...base,
     ...state,
     deviceInfo: {
-      ...DEFAULT_STATE.deviceInfo,
+      ...base.deviceInfo,
       ...state.deviceInfo,
-      network: { ...DEFAULT_STATE.deviceInfo.network, ...state.deviceInfo?.network },
-      system: { ...DEFAULT_STATE.deviceInfo.system, ...state.deviceInfo?.system },
-      miner: { ...DEFAULT_STATE.deviceInfo.miner, ...state.deviceInfo?.miner },
-      power: { ...DEFAULT_STATE.deviceInfo.power, ...state.deviceInfo?.power }
+      network: { ...base.deviceInfo.network, ...state.deviceInfo?.network },
+      system: { ...base.deviceInfo.system, ...state.deviceInfo?.system },
+      miner: { ...base.deviceInfo.miner, ...state.deviceInfo?.miner },
+      power: { ...base.deviceInfo.power, ...state.deviceInfo?.power }
     }
   }
   mergedState.logData = Buffer.isBuffer(mergedState.logData)

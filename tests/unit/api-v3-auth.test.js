@@ -1,9 +1,14 @@
 'use strict'
 
 const test = require('brittle')
-const CryptoJS = require('crypto-js')
+const crypto = require('node:crypto')
 const WMApiV3 = require('../../lib/protocols/wm-api-v3')
-const hex2a = require('../../lib/utils/hex2a')
+
+// Independent of lib/utils/crypto so the test checks the wire format, not the helper.
+function decryptParam (param, hexKey) {
+  const decipher = crypto.createDecipheriv('aes-256-ecb', Buffer.from(hexKey, 'hex'), null)
+  return Buffer.concat([decipher.update(param, 'base64'), decipher.final()]).toString('utf8')
+}
 
 test('api-v3 auth - SHA256 token matches fixed vendor vector', (t) => {
   const handler = new WMApiV3({ rpc: {}, password: 'super' })
@@ -39,11 +44,7 @@ test('api-v3 auth - encrypts only sensitive param and keeps outer command plaint
   t.is(sent.param, 'M7c6KBuUVIiP+BnrFxPBexRUr3Zw94Ng42eBDFq02W9o7MSxcGd0EcmSwVx72paF9s8xliqcLqi00gxEFa8AzpW/A3R+69wXNkHPuGtqhA4=')
 
   const key = handler._generateToken(sent.cmd, sent.ts).key
-  const plaintext = CryptoJS.AES.decrypt(sent.param, key, {
-    mode: CryptoJS.mode.ECB,
-    padding: CryptoJS.pad.Pkcs7
-  }).toString()
-  t.alike(JSON.parse(hex2a(plaintext)), pools)
+  t.alike(JSON.parse(decryptParam(sent.param, key)), pools)
 })
 
 test('api-v3 auth - leaves ordinary params unencrypted', async (t) => {
@@ -84,11 +85,7 @@ test('api-v3 auth - encrypts change-password param without encrypting the outer 
   t.is(sent.data, undefined)
 
   const key = handler._generateToken(sent.cmd, sent.ts).key
-  const plaintext = CryptoJS.AES.decrypt(sent.param, key, {
-    mode: CryptoJS.mode.ECB,
-    padding: CryptoJS.pad.Pkcs7
-  }).toString()
-  t.alike(JSON.parse(hex2a(plaintext)), param)
+  t.alike(JSON.parse(decryptParam(sent.param, key)), param)
 })
 
 test('api-v3 auth - malformed JSON response surfaces a stable error string', async (t) => {
