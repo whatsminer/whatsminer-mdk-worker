@@ -35,6 +35,9 @@ const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 const main = async () => {
   const runtime = new WorkerRuntimeV2(workerDir, {
     workerId: 'whatsminer-live-led-test',
+    // Requests go through handleRequest directly, so no DHT peer ever connects;
+    // a placeholder key satisfies the runtime's fail-closed admission check.
+    allowedKeys: ['00'.repeat(32)],
     devices: [{
       deviceId,
       config: { address, port, apiVersion, password, account, type: 'miner-wm' }

@@ -264,3 +264,37 @@ test('api-v3 client - status view reports a stopped miner and omits fields firmw
   t.is(unknown.mineroff, undefined)
   t.is(unknown.fast_hash, undefined)
 })
+
+for (const [label, makeClient] of [
+  ['api-v3', () => createClient({})],
+  ['api-v2', () => new WhatsminerApiV2Client({ address: '127.0.0.1', port: 4028, password: 'admin', type: 'miner-wm-m56s', id: 'WM-V2', conf: {}, socketer: { rpc: () => ({ request: async () => '{}', stop: async () => {} }) } })]
+]) {
+  test(`${label} fetchDeviceData - shares an in-flight read between concurrent callers`, async (t) => {
+    const client = makeClient()
+    let calls = 0
+    let release
+    const gate = new Promise(resolve => { release = resolve })
+    async function getMinerStats () { calls++; await gate; return { calls } }
+
+    const first = client.fetchDeviceData(getMinerStats)
+    const second = client.fetchDeviceData(getMinerStats)
+    release()
+    t.alike(await Promise.all([first, second]), [{ calls: 1 }, { calls: 1 }])
+    t.is(calls, 1)
+  })
+
+  test(`${label} fetchDeviceData - does not serve a settled value to later reads`, async (t) => {
+    const client = makeClient()
+    let up = true
+    async function getMinerStats () {
+      if (!up) throw new Error('ERR_CONNECTION')
+      return { mhs_av: 1 }
+    }
+
+    t.alike(await client.fetchDeviceData(getMinerStats), { mhs_av: 1 })
+    up = false
+    await t.exception(() => client.fetchDeviceData(getMinerStats), /ERR_CONNECTION/)
+    up = true
+    t.alike(await client.fetchDeviceData(getMinerStats), { mhs_av: 1 })
+  })
+}

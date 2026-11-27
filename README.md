@@ -57,13 +57,15 @@ See [USAGE.md](USAGE.md) and [mdk-contract.json](mdk-contract.json) for telemetr
 
 ## Test
 
-The MDK runtime (`@tetherto/mdk-worker`, `@tetherto/mdk-kernel`) and the smoke harness (`@tetherto/mdk-skill`) are installed from npm:
+The MDK runtime (`@tetherto/mdk-worker`, `@tetherto/mdk-kernel`) and the MDK CLI (`@tetherto/mdk-cli`, which provides `mdk validate worker`) are installed from npm:
 
 ```bash
 npm install
 npm test
 npm run test:smoke
 ```
+
+`test:smoke` runs `mdk validate worker --path . --strict --smoke`: it validates `mdk-contract.json` against the v1 schema, then runs every telemetry channel and the sample commands from `smoke.config.js` against the API v3 mock, stops the mock, and checks that every channel and command then fails with an `ERR_*`.
 
 The test suite covers protocol authentication and framing, API v2/v3 normalization, firmware payload validation, contract handler loading, mock-device behavior, and WorkerRuntimeV2 envelope dispatch.
 

@@ -317,6 +317,24 @@ test('getMinerStatus - returns the status Msg', async (t) => {
   t.alike(calls, ['status'])
 })
 
+test('getMinerStatus - rejects an error reply instead of returning its Msg', async (t) => {
+  const { miner } = makeWhatsminer()
+  miner._requestReadEndpoint = async () => ({ STATUS: 'E', Code: 132, Msg: 'This command is deprecated.' })
+
+  await t.exception(() => miner.getMinerStatus(), /ERR_MINER_STATUS_FAILED: This command is deprecated\. \(Code: 132\)/)
+})
+
+test('_prepSnap - status is undefined when firmware answers status with an error', async (t) => {
+  const { miner } = makeWhatsminer()
+  stubSnapReads(miner, { errors: [], minerInfo: { ...BASE_MINER_INFO } })
+  miner.getMinerStatus = Whatsminer.prototype.getMinerStatus
+  miner._requestReadEndpoint = async () => ({ STATUS: 'E', Code: 14, Msg: 'invalid cmd' })
+
+  const snap = await miner._prepSnap()
+  t.is(snap.stats.status, STATUS.MINING)
+  t.is(snap.stats.miner_specific.status, undefined)
+})
+
 test('_prepSnap - uses summary chip temperature and legacy device PCB temperature', async (t) => {
   const { miner } = makeWhatsminer()
   stubSnapReads(miner, { errors: [], minerInfo: { ...BASE_MINER_INFO } })

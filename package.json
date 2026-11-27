@@ -33,7 +33,7 @@
     "test:unit": "brittle tests/unit/api-v3-*.test.js tests/unit/crypto.test.js tests/unit/firmware*.test.js tests/unit/hex2a.test.js tests/unit/md5.test.js tests/unit/protocols-*.test.js tests/unit/util-index.test.js tests/unit/whatsminer*.test.js",
     "test:integration": "NODE_ENV=test brittle tests/integration/runtime-v2.test.js",
     "test:coverage": "NODE_ENV=test brittle --coverage tests/unit/api-v3-*.test.js tests/unit/crypto.test.js tests/unit/firmware*.test.js tests/unit/hex2a.test.js tests/unit/md5.test.js tests/unit/protocols-*.test.js tests/unit/util-index.test.js tests/unit/whatsminer*.test.js tests/integration/runtime-v2.test.js",
-    "test:smoke": "node node_modules/@tetherto/mdk-skill/dist/skills/mdk-worker/scripts/worker-smoke.mjs ."
+    "test:smoke": "mdk validate worker --path . --strict --smoke"
   },
   "dependencies": {
     "@tetherto/mdk-worker": "^0.14.0",
@@ -41,8 +41,8 @@
     "debug": "4.4.3"
   },
   "devDependencies": {
+    "@tetherto/mdk-cli": "^0.14.0",
     "@tetherto/mdk-kernel": "^0.14.0",
-    "@tetherto/mdk-skill": "^0.14.0",
     "brittle": "3.16.3",
     "standard": "17.1.2"
   },

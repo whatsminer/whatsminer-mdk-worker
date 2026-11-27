@@ -33,6 +33,9 @@ const main = async () => {
   if (port !== undefined) config.port = port
   const runtime = new WorkerRuntimeV2(workerDir, {
     workerId: 'whatsminer-live-readonly',
+    // Requests go through handleRequest directly, so no DHT peer ever connects;
+    // a placeholder key satisfies the runtime's fail-closed admission check.
+    allowedKeys: ['00'.repeat(32)],
     devices: [{ deviceId, config }]
   })
 
